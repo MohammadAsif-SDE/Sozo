@@ -22,8 +22,8 @@ export default function FolderList({ folders, setFolders, onFolderClick }) {
       {folders.map((folder, index) => (
         <div key={index} className="flex justify-between items-center p-2 border-b cursor-pointer hover:bg-gray-100">
           <div onClick={() => onFolderClick(folder.links, index)} className="flex-grow">
-            <div className="font-bold">{folder.name}</div>
-            <div className="text-sm text-gray-500">{folder.links.length} links</div>
+            <div className="font-bold text-lg">{folder.name}</div>
+            <div className="text-xs text-gray-400">{folder.links.length} links</div>
           </div>
           <div>
             <button onClick={() => editFolder(index)} className="mr-2 text-blue-500 hover:text-blue-700">Edit</button>

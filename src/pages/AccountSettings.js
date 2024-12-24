@@ -13,12 +13,12 @@ export default function AccountSettings() {
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
               <img
-                src={user?.photoURL || '/placeholder.svg'}
+                src={user?.profileUrl || '/placeholder.svg'}
                 alt="Profile"
                 className="w-12 h-12 rounded-full"
               />
               <div>
-                <p className="text-white font-medium">{user?.displayName}</p>
+                <p className="text-white font-medium">{user?.name || 'Anonymous'}</p>
                 <p className="text-gray-400 text-sm">{user?.email}</p>
               </div>
             </div>

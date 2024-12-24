@@ -1,15 +1,24 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
-export default function Navbar({ onSave, onSettingsClick, folders, onLoginClick, user }) {
+
+export default function Navbar({ onSave, onSettingsClick, folders, onLoginClick, user, isSyncing  }) {
+  console.log('User in nav: ', user);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
 
   return (
     <div className="bg-black p-3 flex justify-between items-center text-white">
       <div className="flex items-center space-x-4">
         <h1 className="text-lg font-bold">Sozo Tabs</h1>
+        {isSyncing && (
+          <div className="ml-2 flex items-center text-blue-500">
+            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+            <span className="text-xs">Syncing...</span>
+          </div>
+        )}
         <span className="text-sm text-gray-400">
-          {folders?.length || 0}/5 folders used
+          {user ? `Hi, ${user.name}!` : `${folders?.length || 0}/5 folders used`}
         </span>
       </div>
 
@@ -28,7 +37,7 @@ export default function Navbar({ onSave, onSettingsClick, folders, onLoginClick,
               className="flex items-center space-x-2"
             >
               <img
-                src={user.photoURL || '/placeholder.svg'}
+                src={user.profileUrl || '/placeholder.svg'}
                 alt="Profile"
                 className="w-8 h-8 rounded-full"
               />

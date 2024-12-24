@@ -1,7 +1,10 @@
 import React from 'react';
+import Sidebar from '../components/Sidebar';
 
 const Sozo = () => {
-  return <div>Hello</div>;
+  return (
+    <Sidebar/>
+  );
 };
 
 export default Sozo;

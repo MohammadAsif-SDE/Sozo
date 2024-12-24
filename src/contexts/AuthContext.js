@@ -1,109 +1,76 @@
-/* global chrome */
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { auth, db } from '../config/firebase';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider,
-  signInWithEmailLink,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signOut 
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
-const AuthContext = createContext({});
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle email sign-in links
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('emailForSignIn');
-      if (!email) {
-        email = window.prompt('Please provide your email for confirmation');
-      }
-      if (email) {
-        signInWithEmailLink(auth, email, window.location.href)
-          .then((result) => {
-            window.localStorage.removeItem('emailForSignIn');
-            setUser(result.user);
-          })
-          .catch((error) => {
-            console.error('Error signing in with email link:', error);
-          });
-      }
-    }
-
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userRef);
-        
-        if (!userDoc.exists()) {
-          await setDoc(userRef, {
-            email: user.email,
-            name: user.displayName,
-            createdAt: new Date(),
-            isPremium: false
-          });
+    const checkAuth = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/protected', {
+          withCredentials: true
+        });
+        console.log('Login Response: ', response.data);
+        setUser(response.data.user);
+        return response.data;
+      } catch (error) {
+        // Ignore 401 errors during initial auth check
+        if (error.response?.status !== 401) {
+          console.error('Auth check error:', error);
         }
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      throw error;
-    }
-  };
-
-  const loginWithEmail = async (email) => {
-    const actionCodeSettings = {
-      url: chrome.runtime.getURL('http://localhost:3001/login.html'),
-      handleCodeInApp: true
     };
 
-    try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem('emailForSignIn', email);
-      alert('Check your email for the login link!');
-    } catch (error) {
-      console.error('Error sending email link:', error);
-      throw error;
-    }
+    checkAuth();
+  }, []);
+
+  const login = async (credentials) => {
+    const response = await axios.post('http://localhost:3000/api/login', credentials, {
+      withCredentials: true
+    });
+    console.log('Norm Login response:', response.data);
+    setUser(response.data.user);
+    return response.data;
   };
 
-  const logout = () => {
-    return signOut(auth);
+  const googleLogin = async (googleData) => {
+    const response = await axios.post('http://localhost:3000/api/google-login', googleData, {
+      withCredentials: true
+    });
+    console.log('Goo Login response:', response.data);
+    setUser(response.data.user);
+    return response.data;
   };
 
-  const value = {
-    user,
-    loginWithGoogle,
-    loginWithEmail,
-    logout,
-    loading
+  const register = async (userData) => {
+    const response = await axios.post('http://localhost:3000/api/register', userData);
+    return response.data;
+  };
+
+  const logout = async () => {
+    await axios.post('http://localhost:3000/api/logout', {}, {
+      withCredentials: true
+    });
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, login, googleLogin, register, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
-}
-
-export const useAuth = () => {
-  return useContext(AuthContext);
 };
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

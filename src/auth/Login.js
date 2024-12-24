@@ -1,37 +1,50 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
-  const { loginWithGoogle, loginWithEmail } = useAuth();
   const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { login, googleLogin } = useAuth();
 
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      await loginWithGoogle();
-      window.close();
-    } catch (error) {
-      console.error('Failed to log in with Google:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) return;
-    
     try {
-      setIsLoading(true);
-      await loginWithEmail(email);
-      window.close();
+      await login({ email, password });
+      navigate('/Sozo');
     } catch (error) {
-      console.error('Failed to log in with email:', error);
-    } finally {
-      setIsLoading(false);
+      setError(error.response?.data?.message || 'Login failed');
     }
   };
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (response) => {
+      try {
+        // Fetch user information from Google's User Info API
+        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${response.access_token}` }
+        }).then(res => res.json());
+  
+        // Send user information, including the profile picture URL, to the backend
+        await googleLogin({
+          email: userInfo.email,
+          name: userInfo.name,
+          googleId: userInfo.sub,
+          profileUrl: userInfo.picture // Add profile picture URL
+        });
+  
+        // Navigate to the desired page after successful login
+        navigate('/sozo');
+      } catch (error) {
+        setError('Google login failed');
+      }
+    },
+    onError: () => setError('Google login failed')
+  });
+  
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -66,7 +79,7 @@ export default function Login() {
 
           <button
             onClick={handleGoogleLogin}
-            disabled={isLoading}
+            // disabled={isLoading}
             className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#4285f4] hover:bg-[#3367d6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285f4]"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -92,11 +105,12 @@ export default function Login() {
         </div>
 
         {/* Email Form */}
-        <form onSubmit={handleEmailLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
             </label>
+            {error && <div className="error" style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
             <input
               type="email"
               id="email"
@@ -108,9 +122,24 @@ export default function Login() {
               className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
             />
           </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            {error && <div className="error" style={{ color: 'red', marginBottom: '20px' }}>{error}</div>}
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your email address"
+              required
+              className="mt-1 block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+            />
+          </div>
           <button
             type="submit"
-            disabled={!email || isLoading}
             className={`w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
               ${!email ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-700'}`}
           >
